@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+setup.cfg
+setup.py
+pacotesoma/__init__.py
+pacotesoma/pacotesoma.py
+pacotesoma.egg-info/PKG-INFO
+pacotesoma.egg-info/SOURCES.txt
+pacotesoma.egg-info/dependency_links.txt
+pacotesoma.egg-info/requires.txt
+pacotesoma.egg-info/top_level.txt
+tests/test_soma.py

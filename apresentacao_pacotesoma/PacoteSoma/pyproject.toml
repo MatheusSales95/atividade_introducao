@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pacotesoma"
+version = "0.1.0"
+description = "Pacote simples para somar dois números"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Seu Nome", email = "seu.email@example.com" }
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    # "requests>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "build>=0.10",
+    "wheel",
+    "twine",
+]
+
+[tool.setuptools.packages.find]
+exclude = ["tests*"]
