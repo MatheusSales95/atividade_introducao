@@ -12,10 +12,6 @@ from smosaic.smosaic_utils import get_all_cloud_configs
 
 NEW_METHODS = {'avg', 'media', 'med', 'mediana', 'max', 'min', 'maxx', 'minx'}
 
-# Maps computed/derived band names to the real Sentinel-2 bands needed to derive them.
-# Used to expand user-requested bands before scanning downloaded directories.
-COMPUTED_BANDS = {'NBR': ('B08', 'B12')}
-
 
 # ---------------------------------------------------------------------------
 # Spectral index
@@ -297,17 +293,6 @@ def compose_new_method(
 
     nbr_needed = (banda_ref == 'NBR') or ('NBR' in bands)
 
-    # Expand computed bands (e.g. NBR) to the real source bands that exist on disk.
-    # The cube is built from real bands; computed bands are added afterwards.
-    effective_bands = []
-    for b in bands:
-        if b in COMPUTED_BANDS:
-            for rb in COMPUTED_BANDS[b]:
-                if rb not in effective_bands:
-                    effective_bands.append(rb)
-        else:
-            effective_bands.append(b)
-
     cloud_dict = get_all_cloud_configs()
     collection_prefix = collection_name.split('-')[0]
     start_str = str(start_date).replace('-', '')
@@ -320,7 +305,7 @@ def compose_new_method(
     for scene in tqdm.tqdm(scenes, desc=f'Composing ({mosaic_method})'):
 
         cubo = _build_xarray_cube(
-            all_sorted_data, cloud_sorted_data, collection_name, effective_bands, scene
+            all_sorted_data, cloud_sorted_data, collection_name, bands, scene
         )
         if cubo is None:
             continue
@@ -333,7 +318,7 @@ def compose_new_method(
             compo = compo.drop_vars('time')
 
         ref_item = next(
-            item for item in all_sorted_data[effective_bands[0]] if item.get('scene') == scene
+            item for item in all_sorted_data[bands[0]] if item.get('scene') == scene
         )
         with rasterio.open(ref_item['file']) as src:
             profile = src.profile.copy()

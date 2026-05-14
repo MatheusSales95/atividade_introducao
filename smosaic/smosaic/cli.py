@@ -22,7 +22,6 @@ import click
 
 import os
 from smosaic import mosaic as run_mosaic
-from smosaic.smosaic_utils import open_geojson
 
 class Config:
     """A simple decorator class for command line options."""
@@ -103,9 +102,9 @@ def cli(config, stac_url):
               help='Grid crop check definition')
 
 @click.option('--projection_output',
-              type=str,
+              type=int, 
               required=False,
-              help='Projection output: EPSG code (e.g. 4326, 5880) or "BDC"')
+              help='Projection output definition')
 
 @click.option('--tile_id',
               help='Tile cell identifier')
@@ -166,14 +165,6 @@ def mosaic(
             'Use only one spatial selector: --bbox, --geom, or --grid.'
         )
 
-    if projection_output is None:
-        projection_output = 4326
-    elif projection_output.upper() != 'BDC':
-        projection_output = int(projection_output)
-
-    if geom:
-        geom = open_geojson(geom)
-
     if verbose:
         click.secho(f'STAC server: {config.stac_url}', fg='cyan', bold=True)
         click.secho('Working on mosaic...', fg='cyan')
@@ -197,7 +188,7 @@ def mosaic(
         duration_months=duration_months,
         geom=geom,
         grid=grid,
-        tile_id=tile_id,
+        grid_id=tile_id,
         grid_crop=grid_crop,
         projection_output=projection_output,
         bbox=bbox,
