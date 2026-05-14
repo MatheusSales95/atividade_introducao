@@ -1,22 +1,16 @@
 import os
+import shutil
 import pyproj
-import tqdm
 import shapely
+import shapely.geometry
+import shapely.ops
 import rasterio
 from pyproj import Transformer
-
 from rasterio.mask import mask as rasterio_mask
 from shapely.ops import transform
 
 from smosaic.smosaic_clip_raster import clip_raster
 from smosaic.smosaic_utils import COVERAGE_PROJ, get_coverage_projection, load_jsons
-
-
-import rasterio
-import shapely.geometry
-import shapely.ops
-import pyproj
-from pyproj import Transformer
 
 def get_tiles_intersecting_tif(tif_path, grid, projection_output):
     """
@@ -91,21 +85,28 @@ def clip_from_grid(input_folder, grid, tile_id, projection_output):
         if f.lower().endswith(('.tif'))
     ]
     
-    tiles = get_tiles_intersecting_tif(uncropped_tifs[0], grid)
+    tiles = get_tiles_intersecting_tif(uncropped_tifs[0], grid, projection_output)
     
     for image in uncropped_tifs:
 
         for tile in tiles:
-        
+
             base_name = os.path.basename(image)
             name, ext = os.path.splitext(base_name)
             output_filename = f"{name}_{tile}{ext}"
-            
+
+            # clip_raster deletes its input at the end, so use a temp copy
+            # to preserve the original for subsequent tile iterations.
+            tmp_copy = image + f'.{tile}.tmp.tif'
+            shutil.copy2(image, tmp_copy)
+
             clip_raster(
-                input_raster_path=image,
+                input_raster_path=tmp_copy,
                 output_folder=input_folder,
                 projection_output=projection_output,
                 output_filename=output_filename,
                 grid=grid,
-                tile_id=tile
+                tile_id=tile,
             )
+
+        os.remove(image)

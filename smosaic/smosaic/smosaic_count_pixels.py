@@ -1,15 +1,6 @@
 import rasterio
 from rasterio.mask import mask
 import numpy as np
-import shapely.geometry
-from shapely.ops import transform
-from pyproj import CRS, Transformer
-
-from smosaic.smosaic_utils import get_coverage_projection
-
-import rasterio
-from rasterio.mask import mask
-import numpy as np
 from shapely.ops import transform
 from pyproj import CRS, Transformer
 

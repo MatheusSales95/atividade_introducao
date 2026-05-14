@@ -35,5 +35,6 @@ pip install \
   "sphinx-colorschemed-images>=0.2.0" \
   "sphinx-nefertiti==0.9.1" \
   "roman-numerals==4.1.0" \
-  "roman-numerals-py==4.1.0"
+  "roman-numerals-py==4.1.0" \
+  "xarray>=2024.1.0"
 

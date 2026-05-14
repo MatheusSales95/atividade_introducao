@@ -158,14 +158,16 @@ def add_months_to_date(start_date, months_to_add):
 def days_between_dates(date1, date2):
     """
     Calculate the number of days between two dates.
-    
+
     Args:
-        date1 (str): First date in 'YYYY-MM-DD' format
-        date2 (str): Second date in 'YYYY-MM-DD' format
-    
+        date1 (str | datetime.date): First date ('YYYY-MM-DD' string or date object)
+        date2 (str): Second date in 'YYYYMMDD' format
+
     Returns:
-        int: Number of days between the two dates (positive if date2 is after date1, negative if date2 is before date1)
+        int: Number of days between the two dates
     """
+    if not isinstance(date1, str):
+        date1 = str(date1)
     d1 = datetime.datetime.strptime(date1, '%Y-%m-%d')
     d2 = datetime.datetime.strptime(date2, '%Y%m%d')
     
@@ -191,15 +193,15 @@ def add_days_to_date(start_date, days_to_add):
 
 def find_grid_by_name(grid_name):
 
-	bdc_grids_data = load_jsons("grids")
+    bdc_grids_data = load_jsons("grids")
 
-	for grid in bdc_grids_data.get("grids", []):
+    for grid in bdc_grids_data.get("grids", []):
 
-		if grid.get("name") == grid_name:
+        if grid.get("name") == grid_name:
 
-			return grid
-        
-	return None
+            return grid
+
+    return None
 
 
 def geometry_collides_with_bbox(geometry,input_bbox):
@@ -239,9 +241,8 @@ def clean_dir(data_dir, date_list=None, date_interval=None):
 
             for f in files_to_delete:
                 try:
-                    pass
-                    os.remove(f)
-                except:
+                    os.remove(os.path.join(data_dir, f))
+                except OSError:
                     pass
 
     else:

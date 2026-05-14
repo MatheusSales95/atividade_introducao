@@ -8,7 +8,7 @@ import numpy as np
 
 from rasterio.warp import Resampling
 
-from smosaic.smosaic_utils import clean_dir, get_all_cloud_configs
+from smosaic.smosaic_utils import get_all_cloud_configs
 
 
 def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, data_dir, start_date=None, end_date=None):
@@ -79,18 +79,18 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
         profile['nodata'] = cloud_dict[collection_name]['no_data_value']
 
     for scene in scenes:
-        
-        for i in [0,1, 2]:
 
-            images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
+        images = [item['file'] for item in sorted_data if item.get("scene") == scene]
+
+        for i in range(len(images)):
 
             image_filename = images[i].split('/')[-1].split('.')[0]
 
             with rasterio.open(images[i]) as src:
-                image_data = src.read()  
+                image_data = src.read()
                 profile = src.profile
-                height, width = src.shape 
-            
+                height, width = src.shape
+
             non_clear_band_file_name = f"band_non_clear_{image_filename}.tif"
             profile['driver'] = 'GTiff'
             with rasterio.open(os.path.join(data_dir, non_clear_band_file_name), 'w', **profile) as dst:
@@ -149,12 +149,11 @@ def merge_scene(sorted_data, cloud_sorted_data, scenes, collection_name, band, d
 
         merge_files.append(output_file)
 
-    date_list = [
-        filename.split("T")[0][-8:] 
-        for filename in temp_images 
-    ]
-
-    clean_dir(data_dir=data_dir,date_list=date_list)
+    for f in temp_images:
+        try:
+            os.remove(f)
+        except OSError:
+            pass
 
     return dict(merge_files=merge_files)
 
@@ -265,11 +264,11 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
             dst.write(masked_cloud_image, 1)
 
     for scene in scenes:
-        
-        for i in [0,1, 2]:
 
-            images =  [item['file'] for item in sorted_data if item.get("scene") == scene]
-            cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
+        images = [item['file'] for item in sorted_data if item.get("scene") == scene]
+        cloud_images = [item['file'] for item in cloud_sorted_data if item.get("scene") == scene]
+
+        for i in range(len(images)):
 
             image_filename = images[i].split('/')[-1].split('.')[0]
             cloud_filename = cloud_images[i].split('/')[-1].split('.')[0]
@@ -395,11 +394,10 @@ def merge_scene_provenance_cloud(sorted_data, cloud_sorted_data, scenes, collect
         provenance_merge_files.append(provenance_output_file)
         cloud_merge_files.append(cloud_output_file)
 
-    date_list = [
-        filename.split("T")[0][-8:] 
-        for filename in temp_images 
-    ]
-
-    clean_dir(data_dir=data_dir,date_list=date_list)
+    for f in temp_images + provenance_temp_images + temp_cloud_images:
+        try:
+            os.remove(f)
+        except OSError:
+            pass
 
     return dict(merge_files=merge_files, provenance_merge_files=provenance_merge_files, cloud_merge_files=cloud_merge_files)
