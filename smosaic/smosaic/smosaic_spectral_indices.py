@@ -1,7 +1,5 @@
 import os
-import re
 import rasterio
-import subprocess
 import numpy as np
 from rasterio.enums import Resampling
 from rasterio.windows import Window

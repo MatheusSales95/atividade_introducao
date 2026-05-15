@@ -19,7 +19,7 @@ from smosaic.smosaic_get_dataset_extents import get_dataset_extents
 from smosaic.smosaic_grid_crop import clip_from_grid
 from smosaic.smosaic_merge_scene import merge_scene, merge_scene_provenance_cloud
 from smosaic.smosaic_merge_tifs import merge_tifs
-from smosaic.smosaic_new_methods import NEW_METHODS, compose_new_method
+from smosaic.smosaic_new_methods import NEW_METHODS, COMPUTED_BANDS, compose_new_method
 from smosaic.smosaic_reproject_tif import reproject_tifs
 from smosaic.smosaic_spectral_indices import calculate_spectral_indices
 from smosaic.smosaic_utils import add_days_to_date, add_months_to_date, clean_dir, days_between_dates, get_all_cloud_configs, load_jsons
@@ -102,7 +102,7 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     stac = pystac_client.Client.open(stac_url)
 
     if collection not in ['S2_L2A-1','S2_L1C_BUNDLE-1']: #'S2-16D-2'
-        return print(f"{collection['collection']} collection not yet supported.")
+        return print(f"{collection} collection not yet supported.")
     
     # grid
     if (grid != None and tile_id!= None):
@@ -193,18 +193,44 @@ def mosaic(name, data_dir, stac_url, collection, output_dir, start_year, start_m
     else:
         spectral_indices = []
 
+    # Expand derived bands (e.g. NBR) to real STAC bands before querying
+    if bands:
+        query_bands = []
+        for b in bands:
+            if b in COMPUTED_BANDS:
+                for rb in COMPUTED_BANDS[b]:
+                    if rb not in query_bands:
+                        query_bands.append(rb)
+            else:
+                if b not in query_bands:
+                    query_bands.append(b)
+    else:
+        query_bands = bands
+
     dict_collection=collection_query(
         collection=collection,
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
         bbox=bbox,
-        bands=bands
-    )   
+        bands=query_bands
+    )
     
     collection_name = dict_collection['collection']
 
-    if not os.path.exists(data_dir+"/"+collection):
+    collection_dir = os.path.join(data_dir, collection)
+    if not os.path.exists(collection_dir):
         collection_get_data(stac, dict_collection, data_dir=data_dir)
+    elif query_bands:
+        scene_dirs = [
+            s for s in os.listdir(collection_dir)
+            if os.path.isdir(os.path.join(collection_dir, s))
+        ]
+        bands_present = scene_dirs and all(
+            any(os.path.isdir(os.path.join(collection_dir, s, b)) for s in scene_dirs)
+            for b in query_bands
+        )
+        if not bands_present:
+            collection_get_data(stac, dict_collection, data_dir=data_dir)
 
     num_processes = multiprocessing.cpu_count()
 
@@ -249,11 +275,22 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
     # ── Phase 1: build sorted_data for ALL bands ──────────────────────────────
     # count_pixels uses cloud files (same result for every band), so we compute
     # it once per (scene, date) and share the percentages across all bands.
+    # Derived bands (e.g. NBR) are expanded to the real bands stored on disk.
+
+    phase1_bands = []
+    for b in bands:
+        if b in COMPUTED_BANDS:
+            for rb in COMPUTED_BANDS[b]:
+                if rb not in phase1_bands:
+                    phase1_bands.append(rb)
+        else:
+            if b not in phase1_bands:
+                phase1_bands.append(b)
 
     all_sorted_data = {}   # band -> sorted list of items
     cloud_sorted_data = None
 
-    for i, current_band in enumerate(bands):
+    for i, current_band in enumerate(phase1_bands):
 
         cloud_list = []
         band_list = []
@@ -289,11 +326,14 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
         files_list = []
         for path in scenes:
             for band in [current_band, cloud]:
+                band_dir = os.path.join(coll_data_dir, path, band)
+                if not os.path.isdir(band_dir):
+                    continue
                 start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
                 end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
 
                 filtered_files = [
-                    f for f in os.listdir(os.path.join(coll_data_dir, path, band))
+                    f for f in os.listdir(band_dir)
                     if (date_match := re.search(r'\d{8}', f)) and
                     (date_str := date_match.group()) and
                     len(date_str) == 8 and
@@ -302,7 +342,7 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
                     start_dt <= file_date <= end_dt
                 ]
                 for file in filtered_files:
-                    files_list.append(dict(file=os.path.join(coll_data_dir, path, band, file)))
+                    files_list.append(dict(file=os.path.join(band_dir, file)))
 
         band_lookup, cloud_lookup = {}, {}
         for f in files_list:
@@ -379,7 +419,7 @@ def process_period(period, mosaic_method, data_dir, collection_name, bands, bbox
     else:
         duration_str = ""
 
-    filename = all_sorted_data[bands[0]][0]['file'].split('/')[-1]
+    filename = all_sorted_data[phase1_bands[0]][0]['file'].split('/')[-1]
     if collection_name == 'S2_L2A-1':
         baseline_number = filename.split("_N")[1][0:4]
     else:

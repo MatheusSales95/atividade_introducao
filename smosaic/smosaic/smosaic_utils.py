@@ -190,16 +190,11 @@ def add_days_to_date(start_date, days_to_add):
 
 
 def find_grid_by_name(grid_name):
-
-	bdc_grids_data = load_jsons("grids")
-
-	for grid in bdc_grids_data.get("grids", []):
-
-		if grid.get("name") == grid_name:
-
-			return grid
-        
-	return None
+    bdc_grids_data = load_jsons("grids")
+    for grid in bdc_grids_data.get("grids", []):
+        if grid.get("name") == grid_name:
+            return grid
+    return None
 
 
 def geometry_collides_with_bbox(geometry,input_bbox):
@@ -228,19 +223,21 @@ def clean_dir(data_dir, date_list=None, date_interval=None):
                 pass
 
     elif date_list:
+        _TEMP_PREFIXES = ('clear_', 'provenance_', 'band_non_clear_', 'cloud_non_clear_', 'non_clear_')
         for date in date_list:
 
             pattern_date = re.escape(date)
 
             files_to_delete = [
                 f for f in os.listdir(data_dir)
-                if re.search(pattern_date, f) and "merge_" not in f
+                if re.search(pattern_date, f)
+                and "merge_" not in f
+                and any(f.startswith(p) for p in _TEMP_PREFIXES)
             ]
 
             for f in files_to_delete:
                 try:
-                    pass
-                    os.remove(f)
+                    os.remove(os.path.join(data_dir, f))
                 except:
                     pass
 

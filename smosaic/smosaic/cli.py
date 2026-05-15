@@ -188,7 +188,7 @@ def mosaic(
         duration_months=duration_months,
         geom=geom,
         grid=grid,
-        grid_id=tile_id,
+        tile_id=tile_id,
         grid_crop=grid_crop,
         projection_output=projection_output,
         bbox=bbox,

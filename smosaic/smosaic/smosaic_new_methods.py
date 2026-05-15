@@ -12,6 +12,8 @@ from smosaic.smosaic_utils import get_all_cloud_configs
 
 NEW_METHODS = {'avg', 'media', 'med', 'mediana', 'max', 'min', 'maxx', 'minx'}
 
+COMPUTED_BANDS = {'NBR': ('B08', 'B12')}
+
 
 # ---------------------------------------------------------------------------
 # Spectral index
@@ -293,6 +295,17 @@ def compose_new_method(
 
     nbr_needed = (banda_ref == 'NBR') or ('NBR' in bands)
 
+    # Expand derived bands (e.g. NBR) to the real bands stored on disk
+    phase1_bands = []
+    for b in bands:
+        if b in COMPUTED_BANDS:
+            for rb in COMPUTED_BANDS[b]:
+                if rb not in phase1_bands:
+                    phase1_bands.append(rb)
+        else:
+            if b not in phase1_bands:
+                phase1_bands.append(b)
+
     cloud_dict = get_all_cloud_configs()
     collection_prefix = collection_name.split('-')[0]
     start_str = str(start_date).replace('-', '')
@@ -305,7 +318,7 @@ def compose_new_method(
     for scene in tqdm.tqdm(scenes, desc=f'Composing ({mosaic_method})'):
 
         cubo = _build_xarray_cube(
-            all_sorted_data, cloud_sorted_data, collection_name, bands, scene
+            all_sorted_data, cloud_sorted_data, collection_name, phase1_bands, scene
         )
         if cubo is None:
             continue
@@ -318,7 +331,7 @@ def compose_new_method(
             compo = compo.drop_vars('time')
 
         ref_item = next(
-            item for item in all_sorted_data[bands[0]] if item.get('scene') == scene
+            item for item in all_sorted_data[phase1_bands[0]] if item.get('scene') == scene
         )
         with rasterio.open(ref_item['file']) as src:
             profile = src.profile.copy()
